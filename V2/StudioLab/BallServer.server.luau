@@ -1,0 +1,227 @@
+-- Luau | StudioLab/BallServer.server.luau | Roblox Studio only | Physical possession constraint, ballistic launch and swept goal-plane truth.
+local RunService = game:GetService("RunService")
+if not RunService:IsStudio() then return end
+local Players = game:GetService("Players")
+local HttpService = game:GetService("HttpService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+for _,name in {"BallLabActor","BallLabBall"} do
+    if not workspace:IsCollisionGroupRegistered(name) then workspace:RegisterCollisionGroup(name) end
+end
+workspace:CollisionGroupSetCollidable("BallLabActor","BallLabBall",false)
+local endpoint = "__ENDPOINT__"
+local session = HttpService:GenerateGUID(false)
+local bridge = Instance.new("RemoteEvent")
+bridge.Name, bridge.Parent = "BallLabBridge", ReplicatedStorage
+local function part(name, size, position, color, collide)
+    local p = Instance.new("Part")
+    p.Name, p.Size, p.Position, p.Color, p.Anchored, p.CanCollide = name, size, position, color, true, collide
+    p.Parent = workspace
+    return p
+end
+part("BallLabGround", Vector3.new(90,1,150), Vector3.new(0,-.5,-25), Color3.fromRGB(35,140,40), true)
+part("LeftBoundary",Vector3.new(1,8,150),Vector3.new(-45,4,-25),Color3.fromRGB(65,100,75),true)
+part("RightBoundary",Vector3.new(1,8,150),Vector3.new(45,4,-25),Color3.fromRGB(65,100,75),true)
+part("FrontBoundary",Vector3.new(90,8,1),Vector3.new(0,4,-100),Color3.fromRGB(65,100,75),true)
+part("RearBoundary",Vector3.new(90,8,1),Vector3.new(0,4,50),Color3.fromRGB(65,100,75),true)
+local goalZ, goalWidth, goalHeight, radius = -55, 16, 8, .8
+part("LeftPost", Vector3.new(.5,8,.5), Vector3.new(-8,4,goalZ), Color3.new(1,1,1), true)
+part("RightPost", Vector3.new(.5,8,.5), Vector3.new(8,4,goalZ), Color3.new(1,1,1), true)
+part("Crossbar", Vector3.new(16,.5,.5), Vector3.new(0,8,goalZ), Color3.new(1,1,1), true)
+local sensor = part("VerifiedGoalPlane", Vector3.new(16,8,.1), Vector3.new(0,4,goalZ-radius), Color3.fromRGB(30,200,255), false)
+sensor.Transparency = .85
+part("GoalBack", Vector3.new(17,8,.2), Vector3.new(0,4,goalZ-5), Color3.fromRGB(100,100,100), true).Transparency = .7
+local function createBall()
+    local created = Instance.new("Part")
+    created.Name, created.Shape, created.Size = "PhysicalBall", Enum.PartType.Ball, Vector3.one * radius * 2
+    created.Color, created.CustomPhysicalProperties = Color3.new(1,1,1), PhysicalProperties.new(.7,.25,.2,1,1)
+    created.CollisionGroup="BallLabBall"
+    created.Anchored, created.Position, created.Parent = false, Vector3.new(0,radius,-5), workspace
+    created:SetNetworkOwner(nil)
+    return created
+end
+local ball = createBall()
+local starts = {Vector3.new(0,radius,-5),Vector3.new(8,radius,-25),Vector3.new(6,radius,-12),
+    Vector3.new(0,radius,-8),Vector3.new(-6,radius,-10),Vector3.new(0,radius,-6),
+    Vector3.new(0,radius,-4),Vector3.new(0,radius,-4),Vector3.new(0,radius,-7),Vector3.new(0,radius,-10)}
+local trial, scenario, seq, ack, goals = 0, 1, 0, 0, 0
+local testSpeed = 16
+local last, player, owner, align, prepared = nil, nil, nil, nil, nil
+local preparedId, shotId, shotAt, resultShot, resultTrial = 0,0,0,0,0
+local result, reason, cross = "NONE", "", Vector3.zero
+local trialAt, acquireAt, paused, lossInjected, releasedBlock = os.clock(), 0, false, false, false
+local priorBall = ball.Position
+local function rootOf(p)
+    local character = p and p.Character
+    return character and character:FindFirstChild("HumanoidRootPart"), character and character:FindFirstChildOfClass("Humanoid")
+end
+local function release()
+    if align then align:Destroy(); align = nil end
+    owner = nil
+    ball.CanCollide = true
+end
+local function reset(which,speed)
+    if speed==16 or speed==24 then testSpeed=speed end
+    -- Falling below Workspace.FallenPartsDestroyHeight destroys a Part; moving that old instance cannot recreate it.
+    if ball.Parent~=workspace then ball=createBall() end
+    release()
+    local root, humanoid = rootOf(player)
+    scenario = math.clamp(math.floor(which or scenario),1,10)
+    trial += 1
+    prepared, preparedId, shotId, shotAt, resultShot, resultTrial = nil,0,0,0,0,0
+    result, reason, cross = "NONE","",Vector3.zero
+    paused, lossInjected, releasedBlock, trialAt = false,false,false,os.clock()
+    ball.Position, ball.AssemblyLinearVelocity, ball.AssemblyAngularVelocity = starts[scenario],Vector3.zero,Vector3.zero
+    ball.Transparency = 0
+    if root then
+        root.Anchored = false
+        player.Character:PivotTo(CFrame.new(0,4,0) * CFrame.Angles(0,scenario == 4 and math.pi or 0,0))
+        root.AssemblyLinearVelocity, root.AssemblyAngularVelocity = Vector3.zero, Vector3.zero
+        if humanoid then humanoid.WalkSpeed = testSpeed end
+    end
+    priorBall = ball.Position
+    if player then bridge:FireClient(player,{kind="scenario",trial=trial,scenario=scenario,speed=testSpeed,yaw=scenario == 5 and math.pi/2 or 0}) end
+    print("BALLLAB_RESET",session,trial,scenario)
+end
+local function acquire()
+    local root, humanoid = rootOf(player)
+    if not root or not humanoid or humanoid.FloorMaterial == Enum.Material.Air or owner or shotId > 0 then return end
+    local d = root.Position-ball.Position
+    if Vector2.new(d.X,d.Z).Magnitude > 2.6 or math.abs(d.Y)>4 then return end
+    local anchor = root:FindFirstChild("BallLabCarryAttachment") or Instance.new("Attachment")
+    anchor.Name, anchor.Position, anchor.Parent = "BallLabCarryAttachment",Vector3.new(0,-2,-2),root
+    local attachment = ball:FindFirstChild("BallLabAttachment") or Instance.new("Attachment")
+    attachment.Name, attachment.Parent = "BallLabAttachment",ball
+    align = Instance.new("AlignPosition")
+    align.Name, align.Attachment0, align.Attachment1 = "VerifiedPossession",attachment,anchor
+    align.MaxForce, align.MaxVelocity, align.Responsiveness = 100000,100,100
+    align.ApplyAtCenterOfMass, align.Parent = true,ball
+    ball.CanCollide, owner, acquireAt = false,player,os.clock()
+    print("BALLLAB_ACQUIRED",trial,player.UserId)
+end
+local function finite(n) return typeof(n)=="number" and n==n and math.abs(n)<1000000000000 end
+local function command(c)
+    if typeof(c)~="table" or c.session~=session or c.trial~=trial or not finite(c.id) or c.id<=ack then return end
+    ack = c.id
+    if c.action=="stop" then paused=true; return end
+    if c.action=="reset" then reset(c.scenario,c.speed); return end
+    if paused then return end
+    if c.action=="acquire" then acquire(); return end
+    if c.action=="recover" then
+        local root = rootOf(player)
+        local _,humanoid=rootOf(player)
+        if scenario==10 and root then root.Anchored=false; releasedBlock=true; if humanoid then humanoid.WalkSpeed=testSpeed end end
+        return
+    end
+    if c.action=="prepare" then
+        if owner~=player or not align or not align.Parent then return end
+        if not finite(c.dx) or not finite(c.dz) or not finite(c.speed) or not finite(c.lift) or not finite(c.power) then return end
+        if math.abs(Vector2.new(c.dx,c.dz).Magnitude-1)>.01 or c.power<.1 or c.power>1 or math.abs(c.speed-(35+35*c.power))>.01 or c.lift<0 or c.lift>65 then return end
+        prepared, preparedId = c,c.id
+        prepared.at = os.clock()
+        print("BALLLAB_PREPARED",trial,c.id,c.power)
+    elseif c.action=="shoot" then
+        if owner~=player or not align or not prepared or c.plan~=preparedId or os.clock()-prepared.at>3 or shotId>0 then return end
+        release()
+        ball:SetNetworkOwner(nil)
+        local velocity = Vector3.new(prepared.dx*prepared.speed,prepared.lift,prepared.dz*prepared.speed)
+        if scenario==8 then velocity += Vector3.new(75,0,0) end -- Known disturbance fixture; the planner still aims at goal.
+        ball:ApplyImpulse((velocity-ball.AssemblyLinearVelocity)*ball.AssemblyMass)
+        shotId, shotAt, priorBall = c.id,os.clock(),ball.Position
+        print("BALLLAB_SHOT",trial,shotId,ball.Position,velocity)
+    end
+end
+local function characterAdded(character)
+    local function configureActor(item)
+        if item:IsA("BasePart") then item.CollisionGroup="BallLabActor" end
+    end
+    for _,item in character:GetDescendants() do configureActor(item) end
+    character.DescendantAdded:Connect(configureActor)
+    local root = character:WaitForChild("HumanoidRootPart",10)
+    if root then character:PivotTo(CFrame.new(0,4,0)) end
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    if humanoid then humanoid.WalkSpeed=testSpeed end
+end
+local function playerAdded(p)
+    p.CharacterAdded:Connect(characterAdded)
+    if p.Character then task.spawn(characterAdded,p.Character) end
+end
+Players.PlayerAdded:Connect(playerAdded)
+for _, p in Players:GetPlayers() do playerAdded(p) end
+bridge.OnServerEvent:Connect(function(p,packet)
+    if typeof(packet)~="table" then return end
+    if player and p~=player then return end
+    player=p
+    if packet.kind=="stop" then paused=true; return end
+    if packet.kind=="reset" then reset(scenario); return end
+    if packet.kind=="case" then reset(scenario%10+1); return end
+    if not finite(packet.rx) or not finite(packet.rz) or not finite(packet.fx) or not finite(packet.fz) then return end
+    last=packet
+    if trial==0 then reset(1) end
+end)
+RunService.Heartbeat:Connect(function()
+    if trial==0 then return end
+    local root,humanoid = rootOf(player)
+    if owner and (not root or not align or not align.Parent or not align.Attachment0 or not align.Attachment1 or align.Attachment0.Parent~=ball or align.Attachment1.Parent~=root or (root.Position-ball.Position).Magnitude>7) then release() end
+    if scenario==6 and owner and not lossInjected and os.clock()-acquireAt>1 and root and root.Position.Z<-10 then
+        release(); lossInjected=true
+        ball.AssemblyLinearVelocity=Vector3.new(4,0,0) -- Controlled loss fixture, independent of the carry constraint's residual force.
+        print("BALLLAB_LOSS",trial)
+    end
+    if scenario==10 and root and humanoid and not releasedBlock then
+        if os.clock()-trialAt<20 then humanoid.WalkSpeed=0 else humanoid.WalkSpeed=testSpeed; releasedBlock=true end
+    end
+    if scenario==3 and not owner and shotId==0 then
+        local v=ball.AssemblyLinearVelocity
+        ball.AssemblyLinearVelocity=Vector3.new(3*math.cos((os.clock()-trialAt)*.5),v.Y,0)
+    end
+    ball.Transparency=scenario==9 and (os.clock()-trialAt)%5<2 and 1 or 0
+    if shotId>0 and result=="NONE" then
+        local now=ball.Position
+        local plane=goalZ-radius
+        if priorBall.Z>plane and now.Z<=plane then
+            local t=(plane-priorBall.Z)/(now.Z-priorBall.Z)
+            cross=priorBall:Lerp(now,t)
+            local inside=math.abs(cross.X)<=goalWidth/2-radius and cross.Y>=radius and cross.Y<=goalHeight-radius
+            result,reason=inside and "GOAL" or "MISS",inside and "verified full-ball goal-plane crossing" or "crossed goal plane outside aperture"
+            resultShot,resultTrial=shotId,trial
+            if inside then goals+=1 end
+            print("BALLLAB_RESULT",trial,shotId,result,cross)
+        elseif os.clock()-shotAt>6 then
+            result,reason,resultShot,resultTrial="MISS","flight timeout without goal-plane crossing",shotId,trial
+            print("BALLLAB_RESULT",trial,shotId,result,reason)
+        end
+        priorBall=now
+    end
+end)
+task.spawn(function()
+    local warned=false
+    while task.wait(.2) do
+        local root,humanoid=rootOf(player)
+        if root and humanoid and last and trial>0 then
+            seq+=1
+            local v=ball.AssemblyLinearVelocity
+            local packet={kind="ball-lab-v22",studio=true,session=session,seq=seq,trial=trial,caseId=scenario,
+                px=root.Position.X,pz=root.Position.Z,tx=ball.Position.X,tz=ball.Position.Z,vx=v.X,vz=v.Z,ball_y=ball.Position.Y,ball_vy=v.Y,
+                rx=last.rx,rz=last.rz,fx=last.fx,fz=last.fz,speed=humanoid.WalkSpeed,grounded=humanoid.FloorMaterial~=Enum.Material.Air,
+                visible=ball.Transparency<1,active=last.active==true,local_id=1,owner_id=owner==player and 1 or 0,owner_known=true,
+                constraint=align~=nil and align.Parent==ball and align.Attachment0~=nil and align.Attachment0.Parent==ball and align.Attachment1~=nil and align.Attachment1.Parent==root and owner==player,ball_known=ball.Parent==workspace,goal_known=sensor.Parent==workspace,
+                goal_x=0,goal_z=goalZ,goal_width=goalWidth,goal_height=goalHeight,goal_aim_y=3,gravity=workspace.Gravity,radius=radius,
+                ack=ack,prepared_id=preparedId,shot_id=shotId,shot_age=shotId>0 and os.clock()-shotAt or 0,
+                result=result,result_reason=reason,result_trial=resultTrial,result_shot_id=resultShot,goal_counter=goals,
+                cross_x=cross.X,cross_y=cross.Y,cross_z=cross.Z,blocked=root.Anchored or humanoid.WalkSpeed==0}
+            local began=os.clock()
+            local ok,response=pcall(function() return HttpService:PostAsync(endpoint,HttpService:JSONEncode(packet),Enum.HttpContentType.ApplicationJson,false) end)
+            if ok and os.clock()-began<.4 then
+                local decodedOk,data=pcall(function() return HttpService:JSONDecode(response) end)
+                if decodedOk and typeof(data)=="table" and data.command then
+                    local commandOk,commandError=xpcall(function() command(data.command) end,debug.traceback)
+                    if not commandOk then
+                        release()
+                        paused=true
+                        warn("BALLLAB_COMMAND_ERROR "..tostring(commandError))
+                    end
+                end
+            elseif not ok and not warned then warned=true; warn("BallLab telemetry: "..tostring(response)) end
+        end
+    end
+end)

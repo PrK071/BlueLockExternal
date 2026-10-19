@@ -1,0 +1,50 @@
+[
+  {
+    "step": 1,
+    "event": "OpenCV native capture integration",
+    "result": "Pixel fiducials, visible actor marker and actual white sphere"
+  },
+  {
+    "step": 2,
+    "event": "Native physical baseline",
+    "runs": 50,
+    "result": "Evidence recorded per run with seed 20261018"
+  },
+  {
+    "step": 3,
+    "event": "Metric integrity correction",
+    "result": "Reject wrong-run and duplicate truth; require a <=150ms match at declaration; persistent relay added"
+  },
+  {
+    "step": 4,
+    "event": "Camera reframe plus conservative radius",
+    "runs": 5,
+    "result": "Rejected: calibration lost in three cases; sources checkpointed and reverted"
+  },
+  {
+    "step": 5,
+    "event": "Conservative radius alone",
+    "runs": 5,
+    "result": "Rejected: worse mean final distance; sources checkpointed and reverted"
+  },
+  {
+    "step": 6,
+    "event": "Ground truth disabled",
+    "result": "Empty truth file; native vision moved from 8 to 0.93359375 studs; visual confirmation timed out"
+  },
+  {
+    "step": 7,
+    "event": "Emergency STOP verification",
+    "result": "Native MOVE observed, emergency status, heldAfter=0"
+  },
+  {
+    "step": 8,
+    "event": "Batch resume verification",
+    "result": "50 completed / 0 pending; no additional Studio actions"
+  },
+  {
+    "step": 9,
+    "event": "Final state",
+    "result": "Studio Edit; live scripts unchanged; original DLL unchanged; no Runner or Relay left running"
+  }
+]

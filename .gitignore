@@ -1,0 +1,38 @@
+# Builds and local runtime output
+bin/
+obj/
+dist/
+**/bin/
+**/obj
+**/__pycache__/
+**/.venv/
+**/venv/
+*.exe
+*.dll
+*.pdb
+*.zip
+*.nupkg
+
+# Downloaded dependencies; versions and SHA-256 hashes are in the source manifests
+/V2/packages/
+/V2/validation-bin/
+/video-analysis/packages/
+
+# Local test and video captures
+/V2/reports/*
+!/V2/reports/visual-e2e-20261018/
+/V2/reports/visual-e2e-20261018/**
+!/V2/reports/visual-e2e-20261018/RELATORIO.md
+!/V2/reports/visual-e2e-20261018/campaign50-metrics.json
+!/V2/reports/visual-e2e-20261018/campaign50-trials.csv
+!/V2/reports/visual-e2e-20261018/campaign-results.json
+!/V2/reports/visual-e2e-20261018/quality-gate.json
+!/V2/reports/visual-e2e-20261018/history.json
+/video-analysis/reports/
+
+# Derived video frames and annotations
+/video-analysis/*.png
+/video-analysis/frames/
+
+# Roblox Studio lock and transient session output
+/V2/StudioLab/Generated/*.rbxlx.lock

@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "recordedLocalDate": "2026-10-19",
+  "timeZone": "America/Sao_Paulo",
+  "passed": false,
+  "continuousCodeEditingEnabled": false,
+  "prolongedOperationEnabled": false,
+  "codexCliInvoked": false,
+  "boundedPhysicalBatchHarness": true,
+  "requiredVerifiedCompletionRate": 0.8,
+  "observedVerifiedCompletionRate": 0.08,
+  "maximumUnverifiedDeclarations": 0,
+  "observedUnverifiedDeclarations": 3,
+  "allKeysReleased": true,
+  "correctionCycles": 2,
+  "bothControlCandidatesReverted": true,
+  "reasons": [
+    "Verified completion below 80%",
+    "Missing timely ground truth for three visual declarations",
+    "Localization and terminal occlusion failures remain"
+  ],
+  "nextHypotheses": [
+    {
+      "id": "H01",
+      "problem": "Magenta contours can merge unrelated objects, especially at reduced resolution",
+      "experiment": "Cluster marker contours by expected physical diameter and prior measured position; compare stored frames and matched physical cases"
+    },
+    {
+      "id": "H02",
+      "problem": "Ball identity changes or disappears near the avatar",
+      "experiment": "Bound candidate size using the measured fiducial scale; evaluate partial circle fits and identity confidence without relaxing arrival tolerance"
+    },
+    {
+      "id": "H03",
+      "problem": "Reframing loses fiducial calibration",
+      "experiment": "Validate quadrilateral layout under tilted camera before enabling any camera action"
+    },
+    {
+      "id": "H04",
+      "problem": "Server truth is not exactly synchronized to rendered Client frames",
+      "experiment": "Add a render-frame identity for the evaluator only; never expose coordinates to navigation"
+    }
+  ]
+}

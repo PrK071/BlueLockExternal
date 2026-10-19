@@ -1,0 +1,162 @@
+<roblox xmlns:xmime="http://www.w3.org/2005/05/xmlmime" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.roblox.com/roblox.xsd" version="4">
+  <External>null</External>
+  <External>nil</External>
+  <Item class="Workspace" referent="RBXa77c3eaa0c7340a39208ccd1b3ddc562">
+    <Properties>
+      <string name="Name">Workspace</string>
+    </Properties>
+  </Item>
+  <Item class="HttpService" referent="RBX310b27d010ab4e94ba8f98370048be72">
+    <Properties>
+      <string name="Name">HttpService</string>
+      <bool name="HttpEnabled">true</bool>
+    </Properties>
+  </Item>
+  <Item class="ServerScriptService" referent="RBX20a7ab95f18c41db89702471aae0314b">
+    <Properties>
+      <string name="Name">ServerScriptService</string>
+    </Properties>
+    <Item class="Script" referent="RBXdc83501550f3475d88b1586a5caa0a7d">
+      <Properties>
+        <string name="Name">NavigationLabServer</string>
+        <ProtectedString name="Source">-- Luau | StudioLab/Server.server.luau | Roblox Studio only | Operator-owned movement laboratory and localhost telemetry.
+local RunService = game:GetService("RunService")
+if not RunService:IsStudio() then return end
+local Players = game:GetService("Players")
+local HttpService = game:GetService("HttpService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local endpoint = "http://127.0.0.1:59808/a6e37571597f4722be4b7ddfb6b9c37f"
+local bridge = Instance.new("RemoteEvent")
+bridge.Name = "NavigationLabTelemetry"
+bridge.Parent = ReplicatedStorage
+local floor = Instance.new("Part")
+floor.Name, floor.Anchored, floor.Size = "LabGround", true, Vector3.new(250, 1, 250)
+floor.Position, floor.Color = Vector3.new(0, -0.5, 0), Color3.fromRGB(35, 140, 40)
+floor.Parent = workspace
+local target = Instance.new("Part")
+target.Name, target.Shape, target.Anchored = "NavigationTarget", Enum.PartType.Ball, true
+target.Size, target.CanCollide, target.Color = Vector3.new(2, 2, 2), false, Color3.new(1, 1, 1)
+target.Parent = workspace
+local cases = {Vector3.new(0, 1, -20), Vector3.new(0, 1, 20), Vector3.new(-20, 1, 0),
+    Vector3.new(20, 1, 0), Vector3.new(16, 1, -16), Vector3.new(14, 1, -16), Vector3.new(0, 1, -20), Vector3.new(0, 1, -20)}
+local caseIndex, caseAt, last, lastPlayer = 1, os.clock(), nil, nil
+local seq, velocity = 0, Vector3.zero
+local function reset(player)
+    local character = player.Character
+    if character then character:PivotTo(CFrame.new(0, 4, 0)) end
+end
+local function characterAdded(character)
+    local root = character:WaitForChild("HumanoidRootPart", 10)
+    if root then character:PivotTo(CFrame.new(0, 4, 0)) end
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    if humanoid then humanoid.WalkSpeed = 16 end
+end
+local function playerAdded(player)
+    player.CharacterAdded:Connect(characterAdded)
+    if player.Character then task.spawn(characterAdded, player.Character) end
+end
+Players.PlayerAdded:Connect(playerAdded)
+for _, player in Players:GetPlayers() do playerAdded(player) end
+bridge.OnServerEvent:Connect(function(player, packet)
+    if typeof(packet) ~= "table" then return end
+    if packet.kind == "reset" then reset(player); return end
+    if packet.kind == "case" then
+        caseIndex = caseIndex % #cases + 1
+        caseAt = os.clock()
+        reset(player)
+        return
+    end
+    if typeof(packet.rx) ~= "number" or typeof(packet.rz) ~= "number" or typeof(packet.fx) ~= "number" or typeof(packet.fz) ~= "number" then return end
+    last, lastPlayer = packet, player
+end)
+RunService.Heartbeat:Connect(function()
+    local elapsed = os.clock() - caseAt
+    target.Position = cases[caseIndex]
+    velocity = Vector3.zero
+    if caseIndex == 6 then
+        target.Position += Vector3.new(6 * math.sin(elapsed * 0.5), 0, 0)
+        velocity = Vector3.new(3 * math.cos(elapsed * 0.5), 0, 0)
+    end
+    target.Transparency = caseIndex == 8 and elapsed % 6 &gt; 2 and elapsed % 6 &lt; 3 and 1 or 0
+end)
+task.spawn(function()
+    local warned = false
+    while task.wait(0.2) do
+        local character = lastPlayer and lastPlayer.Character
+        local root = character and character:FindFirstChild("HumanoidRootPart")
+        local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+        if root and humanoid and last then
+            seq += 1
+            local packet = {studio = true, seq = seq, px = root.Position.X, pz = root.Position.Z,
+                tx = target.Position.X, tz = target.Position.Z, vx = velocity.X, vz = velocity.Z,
+                rx = last.rx, rz = last.rz, fx = last.fx, fz = last.fz, speed = humanoid.WalkSpeed,
+                grounded = humanoid.FloorMaterial ~= Enum.Material.Air, visible = target.Transparency &lt; 1,
+                caseId = caseIndex, active = last.active == true}
+            local ok, err = pcall(function()
+                HttpService:PostAsync(endpoint, HttpService:JSONEncode(packet), Enum.HttpContentType.ApplicationJson, false)
+            end)
+            if not ok and not warned then warned = true; warn("NavigationLab telemetry: " .. tostring(err)) end
+        end
+    end
+end)
+</ProtectedString>
+      </Properties>
+    </Item>
+  </Item>
+  <Item class="StarterPlayer" referent="RBXf146d1ef39274e66ab908924208c3d7c">
+    <Properties>
+      <string name="Name">StarterPlayer</string>
+    </Properties>
+    <Item class="StarterPlayerScripts" referent="RBX21af5ad947244a56a6632ae763680ae2">
+      <Properties>
+        <string name="Name">StarterPlayerScripts</string>
+      </Properties>
+      <Item class="LocalScript" referent="RBX9b1962d9f3304f679731e2122824c205">
+        <Properties>
+          <string name="Name">NavigationLabClient</string>
+          <ProtectedString name="Source">-- Luau | StudioLab/Client.client.luau | Roblox Studio only | Camera orientation and explicit lab controls.
+local RunService = game:GetService("RunService")
+if not RunService:IsStudio() then return end
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local player = Players.LocalPlayer
+local bridge = game:GetService("ReplicatedStorage"):WaitForChild("NavigationLabTelemetry")
+local angle, elapsed = 0, 0
+local active = true
+UserInputService.WindowFocused:Connect(function() active = true end)
+UserInputService.WindowFocusReleased:Connect(function() active = false end)
+local gui = Instance.new("ScreenGui")
+gui.Name, gui.ResetOnSpawn = "NavigationLab", false
+gui.Parent = player:WaitForChild("PlayerGui")
+local label = Instance.new("TextLabel")
+label.Size, label.Position = UDim2.fromOffset(700, 55), UDim2.fromOffset(20, 10)
+label.BackgroundTransparency, label.TextColor3 = 0.3, Color3.new(1, 1, 1)
+label.TextSize = 18
+label.Text = "LAB: Z gira câmera 90° | T troca alvo | Y reinicia posição | F12 para controle externo"
+label.Parent = gui
+UserInputService.InputBegan:Connect(function(input, processed)
+    if processed then return end
+    if input.KeyCode == Enum.KeyCode.Z then angle += math.pi / 2 end
+    if input.KeyCode == Enum.KeyCode.T then bridge:FireServer({kind = "case"}) end
+    if input.KeyCode == Enum.KeyCode.Y then bridge:FireServer({kind = "reset"}) end
+end)
+RunService.RenderStepped:Connect(function(dt)
+    local character = player.Character
+    local root = character and character:FindFirstChild("HumanoidRootPart")
+    if not root then return end
+    local camera = workspace.CurrentCamera
+    camera.CameraType = Enum.CameraType.Scriptable
+    camera.CFrame = CFrame.lookAt(root.Position + Vector3.new(42 * math.sin(angle), 30, 42 * math.cos(angle)), root.Position)
+    elapsed += dt
+    if elapsed &gt;= 0.08 then
+        elapsed = 0
+        local right, forward = camera.CFrame.RightVector, camera.CFrame.LookVector
+        bridge:FireServer({rx = right.X, rz = right.Z, fx = forward.X, fz = forward.Z, active = active})
+    end
+end)
+</ProtectedString>
+        </Properties>
+      </Item>
+    </Item>
+  </Item>
+</roblox>
