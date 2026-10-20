@@ -1,0 +1,63 @@
+{
+  "date": "2026-10-20",
+  "profile": {
+    "source": "User-supplied HPP from https://offsets.imtheo.lol/",
+    "validation": "Version label and syntax only; runtime reads independently checked",
+    "version": "version-9ac8595712b447a7",
+    "zeroValues": 18,
+    "sourceSha256": "E8522D40B313541D2EDCA8441B42F66A7737685E3CB4BDB1C5A6ADBF728DB275",
+    "headerDeclaredConstants": "392",
+    "constants": 393.0
+  },
+  "controlledProcessTests": {
+    "seconds": 0.2555447,
+    "mode": "controlled owned child process and offscreen drawing; not a Roblox gameplay test",
+    "failed": 0,
+    "passed": 20
+  },
+  "liveProbe": {
+    "gameplayVerified": false,
+    "clientVersion": "version-9ac8595712b447a7",
+    "peakWorkingSet": 19816448,
+    "validFrames": 0,
+    "seconds": 3.0143329,
+    "cpuSeconds": 0.046875,
+    "failedFrames": 27,
+    "pid": 7504,
+    "windowHandle": 0,
+    "firstError": "Ponteiro nulo ou inválido em 0x7FF7C61A9810"
+  },
+  "originalCoreSha256": "E19194F3DE39EEF49AE23118DB11157077F2E3094F1BE4FDD45443074EB34804",
+  "originalCoreUnchanged": true,
+  "inputsSent": 0,
+  "processWritesImplemented": false,
+  "physicalF12Tested": false,
+  "liveOverlayAlignmentTested": false,
+  "sourceHashes": [
+    {
+      "file": "Checks.cs",
+      "Hash": "117E3C76DFCC3E483436E945F112B82D9245DD283946ED4A908C85A0D26CD3A7"
+    },
+    {
+      "file": "Memory.cs",
+      "Hash": "1C74FFAF0FF7A94DB3EB5E082FC25BB5F18793F5DD0F308792E75BE0267D1FDA"
+    },
+    {
+      "file": "Offsets.cs",
+      "Hash": "68346DA4EB39946924281A558EB664FE34A3581F0AB53A3BFD04DB77831EFC6F"
+    },
+    {
+      "file": "Overlay.cs",
+      "Hash": "24BD55F7326AA0E774812053431FD6E61876A45BBC90DFB8B15A0D82229EED37"
+    },
+    {
+      "file": "Program.cs",
+      "Hash": "D25D4E62F52C4817EDD536ECEE64EFF5D806D9D505DA355519ABFF55B17F5D2C"
+    },
+    {
+      "file": "Scene.cs",
+      "Hash": "79409A80F2CCC9A26AF5C0724C5DCD5FD4D8DB14C35E7EFE37C2B4F982464908"
+    }
+  ],
+  "binarySha256": "B908285C300575F0D2B7153667832CD4FEC3B198E9C51666A186C0046EE35A27"
+}

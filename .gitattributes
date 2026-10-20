@@ -1,0 +1,2 @@
+# Preserve the supplied offset snapshot byte-for-byte for its provenance hash.
+ExternalEsp/profile/supplied-offsets.hpp -text -whitespace

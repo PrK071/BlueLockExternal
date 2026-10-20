@@ -1,0 +1,13 @@
+{
+  "date": "2026-10-20",
+  "testedSourceTree": "f4a8a7fda79461476b432455007da97c6495fc3d",
+  "method": "git archive of staged tree; independent build and actual controlled-child-process tests",
+  "passed": 20,
+  "failed": 0,
+  "seconds": 0.2724612,
+  "liveGameplayRevalidated": false,
+  "binarySha256": "EB66EFCEAF0EF31AB3B20A4B932F88489DA8A5A030F396D4F62F77EEF3E9C12F",
+  "originalCoreSha256": "E19194F3DE39EEF49AE23118DB11157077F2E3094F1BE4FDD45443074EB34804",
+  "profileRoundTripSha256": "E8522D40B313541D2EDCA8441B42F66A7737685E3CB4BDB1C5A6ADBF728DB275",
+  "profileRoundTripVerified": true
+}

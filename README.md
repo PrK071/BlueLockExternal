@@ -5,6 +5,7 @@ Ferramentas locais para controlar sequências de entrada no Windows e pesquisar 
 ## Componentes
 
 - `BlueLockExternal.cs`: aplicativo Windows Forms original, com atalhos globais, pausa por perda de foco e parada de emergência.
+- `ExternalEsp/`: ESP externo em C# com build independente, diagnóstico limitado e testes em processo controlado.
 - `V2/`: captura da janela, percepção OpenCV, tracking, previsão, decisão, entrada nativa e testes.
 - `V2/Diagnostics/VisualE2E/`: detector e controlador visual de laboratório, preparação de cenários, relay MCP, análise e execução de campanhas limitadas.
 - `V2/StudioLab/`: scripts do laboratório controlado Roblox Studio.
@@ -34,3 +35,12 @@ Os testes C# são compilados pelo script de build. O relatório de implementaç�
 ## Arquivos locais
 
 Capturas, executáveis, pacotes baixados, checkpoints e logs volumosos de campanhas são ignorados pelo Git. O relatório resumido, CSV por tentativa e JSON agregado ficam versionados para comparação entre campanhas.
+
+## ESP externo
+
+[`ExternalEsp/`](ExternalEsp/README.md) contém um executável separado com leitor de memória, ESP de jogadores/candidatos a bola, filtro de distância, F9 e F12. O transporte e o desenho passaram por 20 verificações em processo controlado. A sonda no cliente real retornou ponteiro inicial nulo; o funcionamento em partida ainda não foi demonstrado. Consulte o [relatório](ExternalEsp/REPORT.md).
+
+```powershell
+& .\ExternalEsp\build.ps1
+& .\ExternalEsp\bin\BlueLockEsp.exe
+```

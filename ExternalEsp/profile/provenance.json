@@ -1,0 +1,9 @@
+{
+  "source": "User-supplied HPP from https://offsets.imtheo.lol/",
+  "validation": "Version label and syntax only; runtime reads independently checked",
+  "version": "version-9ac8595712b447a7",
+  "zeroValues": 18,
+  "sourceSha256": "E8522D40B313541D2EDCA8441B42F66A7737685E3CB4BDB1C5A6ADBF728DB275",
+  "headerDeclaredConstants": "392",
+  "constants": 393.0
+}

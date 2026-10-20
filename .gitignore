@@ -36,3 +36,6 @@ dist/
 
 # Roblox Studio lock and transient session output
 /V2/StudioLab/Generated/*.rbxlx.lock
+
+# ESP runtime logs, controlled-process recordings and generated previews
+/ExternalEsp/reports/
